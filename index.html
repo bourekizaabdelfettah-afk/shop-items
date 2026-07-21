@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#E4D9BE">
 <title>سلع للشراء</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="سلع المحل">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Changa:wght@700&display=swap" rel="stylesheet">
@@ -96,6 +102,26 @@
   #add-form button:disabled { opacity: 0.5; cursor: not-allowed; }
   #add-form button:focus-visible,
   #item-input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .tool-btn {
+    background: transparent;
+    border: 1.5px solid var(--border);
+    color: var(--ink);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .tool-btn:hover { background: var(--paper-2); }
+  .tool-btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
   .notice {
     background: var(--paper-2);
@@ -222,12 +248,17 @@
       <input id="item-input" type="text" placeholder="اكتب اسم السلعة..." autocomplete="off" required />
       <button type="submit">إضافة</button>
     </form>
+    <div class="toolbar">
+      <button id="install-btn" type="button" class="tool-btn" hidden>📲 تثبيت التطبيق</button>
+      <button id="share-btn" type="button" class="tool-btn">💬 مشاركة عبر واتساب</button>
+    </div>
   </header>
 
   <div id="setup-notice" class="notice" hidden>
     لم يتم ربط قاعدة البيانات بعد. افتح هذا الملف بمحرر نصوص وضع رابط ومفتاح مشروعك في Supabase داخل المتغيّرين <code>SUPABASE_URL</code> و <code>SUPABASE_KEY</code> أعلى الكود.
   </div>
   <div id="error-notice" class="notice error" hidden></div>
+  <div id="info-notice" class="notice" hidden></div>
 
   <ul id="list"></ul>
   <p id="empty-state">جارٍ التحميل...</p>
@@ -240,8 +271,8 @@
 // ================== إعداد Supabase ==================
 // ضع هنا رابط مشروعك ومفتاحه العام (Anon / Publishable key)
 // تجدهما في لوحة تحكم Supabase: Settings > API (أو Connect)
-const SUPABASE_URL = 'https://izpxnymviiaqayskyizx.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_b4ammZs_lB1JuVpyjtg5Cw_7rhvdB7Q';
+const SUPABASE_URL = 'ضع_رابط_مشروعك_هنا';
+const SUPABASE_KEY = 'ضع_مفتاحك_العام_هنا';
 // =====================================================
 
 const TABLE_NAME = 'shopping_list';
@@ -255,6 +286,9 @@ const inputEl = document.getElementById('item-input');
 const submitBtn = formEl.querySelector('button');
 const setupNoticeEl = document.getElementById('setup-notice');
 const errorNoticeEl = document.getElementById('error-notice');
+const infoNoticeEl = document.getElementById('info-notice');
+const installBtn = document.getElementById('install-btn');
+const shareBtn = document.getElementById('share-btn');
 
 let errorTimer = null;
 function showError(msg) {
@@ -262,6 +296,11 @@ function showError(msg) {
   errorNoticeEl.hidden = false;
   clearTimeout(errorTimer);
   errorTimer = setTimeout(() => { errorNoticeEl.hidden = true; }, 4500);
+}
+
+function showInfo(msg) {
+  infoNoticeEl.textContent = msg;
+  infoNoticeEl.hidden = false;
 }
 
 function escapeHtml(str) {
@@ -350,6 +389,53 @@ if (isConfigured) {
   submitBtn.disabled = true;
   inputEl.placeholder = 'أكمل إعداد قاعدة البيانات أولاً';
 }
+
+// ================== التثبيت على الهاتف (PWA) ==================
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+const isStandalone =
+  window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+
+let deferredInstallPrompt = null;
+
+if (isStandalone) {
+  installBtn.hidden = true;
+} else if (isIOS) {
+  installBtn.hidden = false;
+  installBtn.textContent = '📲 كيف أثبّته على آيفون؟';
+  installBtn.addEventListener('click', () => {
+    showInfo('على آيفون: افتح هذا الرابط من متصفح Safari، اضغط زر المشاركة (المربع وفوقه سهم)، ثم اختر "إضافة إلى الشاشة الرئيسية".');
+  });
+} else {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    installBtn.hidden = false;
+  });
+  installBtn.addEventListener('click', async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    installBtn.hidden = true;
+  });
+  window.addEventListener('appinstalled', () => {
+    installBtn.hidden = true;
+  });
+}
+
+// ================== مشاركة عبر واتساب ==================
+shareBtn.addEventListener('click', () => {
+  const url = window.location.href.split('#')[0].split('?')[0];
+  const message = 'قائمة سلع المحل 🛒\n' + url;
+  const waLink = 'https://wa.me/?text=' + encodeURIComponent(message);
+  window.open(waLink, '_blank', 'noopener');
+});
 </script>
 </body>
 </html>

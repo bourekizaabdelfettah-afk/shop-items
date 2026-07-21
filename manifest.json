@@ -1,0 +1,16 @@
+{
+  "name": "سلع للشراء - قائمة المحل",
+  "short_name": "سلع المحل",
+  "description": "قائمة مشتركة لتسجيل سلع المحل التي يجب شراؤها",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#E4D9BE",
+  "theme_color": "#E4D9BE",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
