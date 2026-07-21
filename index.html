@@ -1,103 +1,355 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>إدارة نواقص المحل</title>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: #f4f6f9; padding: 15px; color: #333; display: flex; justify-content: center; align-items: start; min-height: 100vh; }
-        .container { width: 100%; max-width: 450px; background: white; padding: 20px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 10px; }
-        h2 { text-align: center; color: #2c3e50; font-size: 22px; margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .input-group { display: flex; flex-direction: column; gap: 10px; margin-bottom: 25px; }
-        .inputs-row { display: flex; gap: 10px; width: 100%; }
-        input[type="text"] { flex: 2; padding: 14px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 16px; outline: none; transition: 0.2s; text-align: right; }
-        input[type="text"]:focus { border-color: #3498db; background-color: #f8fafc; }
-        input[type="number"] { width: 70px; padding: 14px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 16px; text-align: center; outline: none; }
-        input[type="number"]:focus { border-color: #3498db; }
-        .btn-add { background-color: #2ecc71; color: white; border: none; padding: 14px; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: bold; width: 100%; transition: 0.2s; box-shadow: 0 2px 4px rgba(46, 204, 113, 0.2); }
-        .btn-add:hover { background-color: #27ae60; }
-        .product-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-        .product-item { display: flex; justify-content: space-between; align-items: center; padding: 14px; background: #fafafa; border: 1px solid #edf2f7; border-radius: 10px; transition: 0.2s; }
-        .product-info { display: flex; align-items: center; gap: 10px; overflow: hidden; }
-        .product-name { font-size: 16px; font-weight: 600; color: #2d3748; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .product-qty { background: #e1f5fe; color: #0288d1; padding: 3px 10px; border-radius: 20px; font-size: 13px; font-weight: bold; white-space: nowrap; }
-        .btn-check { background-color: #3498db; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: 0.2s; flex-shrink: 0; }
-        .btn-check:hover { background-color: #2980b9; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#E4D9BE">
+<title>سلع للشراء</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Changa:wght@700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #E4D9BE;
+    --paper-2: #D8CAA8;
+    --paper-3: #EFE7D2;
+    --ink: #2B2318;
+    --ink-soft: #7A6B50;
+    --green: #2F5D3A;
+    --green-deep: #24492D;
+    --stamp: #A23B2E;
+    --border: rgba(43,35,24,0.16);
+    --radius: 14px;
+    --blob: 46% 54% 51% 49% / 55% 45% 55% 45%;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Cairo', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+  }
+  .app {
+    width: 100%;
+    max-width: 480px;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 0 16px 28px;
+  }
+  header {
+    position: sticky;
+    top: 0;
+    background: var(--paper);
+    padding: 26px 2px 18px;
+    border-bottom: 2px dashed var(--border);
+    z-index: 5;
+  }
+  h1 {
+    font-family: 'Changa', sans-serif;
+    font-weight: 700;
+    font-size: 27px;
+    margin: 0 0 4px;
+    color: var(--ink);
+  }
+  .subtitle {
+    margin: 0;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+  #add-form {
+    display: flex;
+    gap: 8px;
+    margin-top: 18px;
+  }
+  #item-input {
+    flex: 1;
+    min-width: 0;
+    background: var(--paper-3);
+    border: 1.5px solid var(--border);
+    color: var(--ink);
+    border-radius: var(--radius);
+    padding: 13px 15px;
+    font-size: 16px;
+    font-family: 'Cairo', sans-serif;
+    outline: none;
+  }
+  #item-input:focus { border-color: var(--green); }
+  #item-input::placeholder { color: var(--ink-soft); }
+  #item-input:disabled { opacity: 0.6; }
+  #add-form button {
+    background: var(--green);
+    color: #F4EFE0;
+    border: none;
+    border-radius: var(--radius);
+    padding: 0 20px;
+    font-family: 'Cairo', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  #add-form button:hover:not(:disabled) { background: var(--green-deep); }
+  #add-form button:disabled { opacity: 0.5; cursor: not-allowed; }
+  #add-form button:focus-visible,
+  #item-input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  .notice {
+    background: var(--paper-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 13px 15px;
+    font-size: 13.5px;
+    line-height: 1.8;
+    margin-top: 16px;
+    color: var(--ink);
+  }
+  .notice.error { border-color: var(--stamp); color: var(--stamp); }
+  .notice code {
+    background: rgba(43,35,24,0.09);
+    padding: 2px 6px;
+    border-radius: 6px;
+    font-size: 12.5px;
+  }
+
+  ul#list {
+    list-style: none;
+    margin: 18px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .item {
+    position: relative;
+    overflow: hidden;
+    min-height: 60px;
+    background: var(--paper-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    animation: itemIn 220ms ease;
+  }
+  @keyframes itemIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .item-text {
+    font-size: 16px;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+  .item.stamping .item-text {
+    transition: color 300ms ease 200ms;
+    color: var(--ink-soft);
+  }
+  .item::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 52px;
+    height: 52px;
+    border: 3px solid var(--stamp);
+    border-radius: var(--blob);
+    opacity: 0;
+    transform: scale(2) rotate(18deg);
+    pointer-events: none;
+  }
+  .item.stamping::after {
+    animation: stampIn 380ms cubic-bezier(.2,1.5,.4,1) forwards;
+  }
+  @keyframes stampIn {
+    0% { opacity: 0; transform: scale(2.3) rotate(18deg); }
+    60% { opacity: 0.9; transform: scale(0.88) rotate(-8deg); }
+    100% { opacity: 0.85; transform: scale(1) rotate(-8deg); }
+  }
+  .item.removing {
+    transition: opacity 280ms ease, transform 280ms ease;
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  .done-btn {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--blob);
+    border: 1.5px solid var(--stamp);
+    background: transparent;
+    color: var(--stamp);
+    font-size: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .done-btn:hover { background: var(--stamp); color: var(--paper); }
+  .done-btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .done-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  #empty-state {
+    text-align: center;
+    color: var(--ink-soft);
+    padding: 44px 18px;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  footer {
+    margin-top: auto;
+    padding-top: 22px;
+    text-align: center;
+    color: var(--ink-soft);
+    font-size: 13px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+</style>
 </head>
 <body>
+<div class="app">
+  <header>
+    <h1>سلع للشراء</h1>
+    <p class="subtitle">قائمة مشتركة بينك وبين العامل، تتحدّث لحظياً على الجهازين</p>
+    <form id="add-form">
+      <input id="item-input" type="text" placeholder="اكتب اسم السلعة..." autocomplete="off" required />
+      <button type="submit">إضافة</button>
+    </form>
+  </header>
 
-<div class="container">
-    <h2>📋 نواقص المحل الحالية</h2>
-    <div class="input-group">
-        <div class="inputs-row">
-            <input type="text" id="productName" placeholder="اسم السلعة الناقصة..." autocomplete="off">
-            <input type="number" id="productQty" value="1" min="1">
-        </div>
-        <button class="btn-add" onclick="addProduct()">إضافة السلعة</button>
-    </div>
-    <ul class="product-list" id="productList"></ul>
+  <div id="setup-notice" class="notice" hidden>
+    لم يتم ربط قاعدة البيانات بعد. افتح هذا الملف بمحرر نصوص وضع رابط ومفتاح مشروعك في Supabase داخل المتغيّرين <code>SUPABASE_URL</code> و <code>SUPABASE_KEY</code> أعلى الكود.
+  </div>
+  <div id="error-notice" class="notice error" hidden></div>
+
+  <ul id="list"></ul>
+  <p id="empty-state">جارٍ التحميل...</p>
+
+  <footer>عدد السلع: <span id="count">0</span></footer>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-    const SUPABASE_URL = 'https://izpxnymviiaqayskyizx.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_b4ammZs_lB1JuVpyjtg5Cw_7rhvdB7Q';
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// ================== إعداد Supabase ==================
+// ضع هنا رابط مشروعك ومفتاحه العام (Anon / Publishable key)
+// تجدهما في لوحة تحكم Supabase: Settings > API (أو Connect)
+const SUPABASE_URL = 'https://izpxnymviiaqayskyizx.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_b4ammZs_lB1JuVpyjtg5Cw_7rhvdB7Q';
+// =====================================================
 
-    window.onload = fetchMissingProducts;
+const TABLE_NAME = 'shopping_list';
+const isConfigured = !SUPABASE_URL.includes('ضع_') && !SUPABASE_KEY.includes('ضع_');
 
-    async function fetchMissingProducts() {
-        const { data, error } = await supabase
-            .from('missing_products')
-            .select('*')
-            .eq('is_bought', false)
-            .order('created_at', { ascending: false });
+const listEl = document.getElementById('list');
+const emptyEl = document.getElementById('empty-state');
+const countEl = document.getElementById('count');
+const formEl = document.getElementById('add-form');
+const inputEl = document.getElementById('item-input');
+const submitBtn = formEl.querySelector('button');
+const setupNoticeEl = document.getElementById('setup-notice');
+const errorNoticeEl = document.getElementById('error-notice');
 
-        if (error) { console.error(error); return; }
-        const listElement = document.getElementById('productList');
-        listElement.innerHTML = '';
+let errorTimer = null;
+function showError(msg) {
+  errorNoticeEl.textContent = msg;
+  errorNoticeEl.hidden = false;
+  clearTimeout(errorTimer);
+  errorTimer = setTimeout(() => { errorNoticeEl.hidden = true; }, 4500);
+}
 
-        data.forEach(item => {
-            const li = document.createElement('li');
-            li.className = 'product-item';
-            li.innerHTML = `
-                <div class="product-info">
-                    <span class="product-name">${item.product_name}</span>
-                    <span class="product-qty">الكمية: ${item.quantity}</span>
-                </div>
-                <button class="btn-check" onclick="markAsBought(${item.id})">تم الشراء ✓</button>
-            `;
-            listElement.appendChild(li);
-        });
-    }
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
 
-    async function addProduct() {
-        const nameInput = document.getElementById('productName');
-        const qtyInput = document.getElementById('productQty');
-        const name = nameInput.value.trim();
-        const qty = parseInt(qtyInput.value);
+function renderItems(items) {
+  listEl.innerHTML = '';
+  if (!items || items.length === 0) {
+    emptyEl.textContent = 'القائمة فارغة الآن. أضف أول سلعة يحتاجها المحل.';
+    emptyEl.hidden = false;
+  } else {
+    emptyEl.hidden = true;
+    items.forEach((item) => {
+      const li = document.createElement('li');
+      li.className = 'item';
+      li.dataset.id = item.id;
+      li.innerHTML =
+        '<span class="item-text">' + escapeHtml(item.item_name) + '</span>' +
+        '<button class="done-btn" type="button" aria-label="تم الشراء" title="تم الشراء">✓</button>';
+      listEl.appendChild(li);
+    });
+  }
+  countEl.textContent = items ? items.length : 0;
+}
 
-        if (!name) { alert('من فضلك اكتب اسم السلعة أولاً!'); return; }
+let supabaseClient = null;
 
-        const { error } = await supabase
-            .from('missing_products')
-            .insert([{ product_name: name, quantity: qty }]);
+async function loadItems() {
+  if (!supabaseClient) return;
+  const { data, error } = await supabaseClient
+    .from(TABLE_NAME)
+    .select('*')
+    .order('created_at', { ascending: true });
+  if (error) {
+    showError('تعذّر تحميل القائمة: ' + error.message);
+    return;
+  }
+  renderItems(data);
+}
 
-        if (error) { alert('حدث خطأ!'); console.error(error); } 
-        else { nameInput.value = ''; qtyInput.value = '1'; fetchMissingProducts(); }
-    }
+formEl.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!supabaseClient) return;
+  const name = inputEl.value.trim();
+  if (!name) return;
+  inputEl.value = '';
+  inputEl.focus();
+  const { error } = await supabaseClient.from(TABLE_NAME).insert({ item_name: name });
+  if (error) showError('تعذّرت الإضافة: ' + error.message);
+});
 
-    async function markAsBought(id) {
-        const { error } = await supabase
-            .from('missing_products')
-            .update({ is_bought: true })
-            .eq('id', id);
+listEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('.done-btn');
+  if (!btn || !supabaseClient) return;
+  const li = btn.closest('.item');
+  const id = li.dataset.id;
+  btn.disabled = true;
+  li.classList.add('stamping');
+  setTimeout(() => {
+    li.classList.add('removing');
+    setTimeout(async () => {
+      const { error } = await supabaseClient.from(TABLE_NAME).delete().eq('id', id);
+      if (error) {
+        showError('تعذّر الحذف: ' + error.message);
+        li.classList.remove('stamping', 'removing');
+        btn.disabled = false;
+      }
+    }, 280);
+  }, 420);
+});
 
-        if (error) { alert('حدث خطأ!'); console.error(error); } 
-        else { fetchMissingProducts(); }
-    }
+if (isConfigured) {
+  supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  loadItems();
+  supabaseClient
+    .channel('shopping_list_realtime')
+    .on('postgres_changes', { event: '*', schema: 'public', table: TABLE_NAME }, loadItems)
+    .subscribe();
+} else {
+  emptyEl.hidden = true;
+  setupNoticeEl.hidden = false;
+  inputEl.disabled = true;
+  submitBtn.disabled = true;
+  inputEl.placeholder = 'أكمل إعداد قاعدة البيانات أولاً';
+}
 </script>
 </body>
 </html>
