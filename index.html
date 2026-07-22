@@ -122,6 +122,25 @@
   }
   .tool-btn:hover { background: var(--paper-2); }
   .tool-btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .tool-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+  .toolbar-label { margin: 12px 0 0; font-size: 12.5px; color: var(--ink-soft); }
+
+  #export-template {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    width: 420px;
+    background: var(--paper);
+    padding: 28px 26px;
+    font-family: 'Cairo', sans-serif;
+    color: var(--ink);
+    direction: rtl;
+  }
+  #export-template h2 { font-family: 'Changa', sans-serif; font-size: 24px; margin: 0 0 4px; }
+  #export-template .export-header { border-bottom: 2px dashed var(--border); padding-bottom: 14px; margin-bottom: 14px; }
+  #export-template #export-date { margin: 0; font-size: 13px; color: var(--ink-soft); }
+  #export-template ol { margin: 0; padding-inline-start: 22px; font-size: 17px; line-height: 2.1; }
+  #export-template .export-footer { margin: 18px 0 0; padding-top: 12px; border-top: 2px dashed var(--border); font-size: 12px; color: var(--ink-soft); text-align: center; }
 
   .notice {
     background: var(--paper-2);
@@ -250,7 +269,13 @@
     </form>
     <div class="toolbar">
       <button id="install-btn" type="button" class="tool-btn" hidden>📲 تثبيت التطبيق</button>
-      <button id="share-btn" type="button" class="tool-btn">💬 مشاركة عبر واتساب</button>
+      <button id="share-btn" type="button" class="tool-btn">🔗 رابط التطبيق</button>
+    </div>
+    <p class="toolbar-label">إرسال القائمة الحالية إلى المورّد:</p>
+    <div class="toolbar">
+      <button id="export-image-btn" type="button" class="tool-btn">🖼️ صورة</button>
+      <button id="export-pdf-btn" type="button" class="tool-btn">📄 PDF</button>
+      <button id="export-wa-btn" type="button" class="tool-btn">💬 نص واتساب</button>
     </div>
   </header>
 
@@ -266,13 +291,22 @@
   <footer>عدد السلع: <span id="count">0</span></footer>
 </div>
 
+<div id="export-template">
+  <div class="export-header">
+    <h2>قائمة السلع المطلوبة</h2>
+    <p id="export-date"></p>
+  </div>
+  <ol id="export-items"></ol>
+  <p class="export-footer">تم الإرسال عبر تطبيق سلع المحل</p>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ================== إعداد Supabase ==================
 // ضع هنا رابط مشروعك ومفتاحه العام (Anon / Publishable key)
 // تجدهما في لوحة تحكم Supabase: Settings > API (أو Connect)
-const SUPABASE_URL = 'https://izpxnymviiaqayskyizx.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_b4ammZs_lB1JuVpyjtg5Cw_7rhvdB7Q';
+const SUPABASE_URL = 'ضع_رابط_مشروعك_هنا';
+const SUPABASE_KEY = 'ضع_مفتاحك_العام_هنا';
 // =====================================================
 
 const TABLE_NAME = 'shopping_list';
@@ -429,12 +463,126 @@ if (isStandalone) {
   });
 }
 
-// ================== مشاركة عبر واتساب ==================
+// ================== مشاركة رابط التطبيق ==================
 shareBtn.addEventListener('click', () => {
   const url = window.location.href.split('#')[0].split('?')[0];
   const message = 'قائمة سلع المحل 🛒\n' + url;
   const waLink = 'https://wa.me/?text=' + encodeURIComponent(message);
   window.open(waLink, '_blank', 'noopener');
+});
+
+// ================== تصدير القائمة (صورة / PDF / نص واتساب) ==================
+function getCurrentItemNames() {
+  return Array.from(listEl.querySelectorAll('.item-text')).map((el) => el.textContent);
+}
+
+function buildListText(items) {
+  let text = '🛒 قائمة السلع المطلوبة:\n';
+  items.forEach((name, i) => { text += (i + 1) + '. ' + name + '\n'; });
+  text += '\nتم الإرسال من تطبيق سلع المحل';
+  return text;
+}
+
+function loadScriptOnce(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector('script[data-src="' + src + '"]')) { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = src;
+    s.dataset.src = src;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('فشل تحميل مكتبة التصدير'));
+    document.head.appendChild(s);
+  });
+}
+
+let exportLibsPromise = null;
+function ensureExportLibraries() {
+  if (!exportLibsPromise) {
+    exportLibsPromise = Promise.all([
+      loadScriptOnce('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js'),
+      loadScriptOnce('https://cdn.jsdelivr.net/npm/jspdf@4/dist/jspdf.umd.min.js')
+    ]);
+  }
+  return exportLibsPromise;
+}
+
+function canvasToBlob(canvas) {
+  return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+}
+
+async function renderExportCanvas(items) {
+  const dateEl = document.getElementById('export-date');
+  const olEl = document.getElementById('export-items');
+  dateEl.textContent = new Date().toLocaleDateString('ar-DZ-u-nu-latn', { year: 'numeric', month: 'long', day: 'numeric' });
+  olEl.innerHTML = '';
+  items.forEach((name) => {
+    const li = document.createElement('li');
+    li.textContent = name;
+    olEl.appendChild(li);
+  });
+  return await html2canvas(document.getElementById('export-template'), { backgroundColor: '#E4D9BE', scale: 2 });
+}
+
+async function withBusyLabel(btn, busyText, fn) {
+  const original = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = busyText;
+  try {
+    await fn();
+  } catch (err) {
+    showError('تعذّرت العملية، حاول مجدداً');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
+
+document.getElementById('export-wa-btn').addEventListener('click', () => {
+  const items = getCurrentItemNames();
+  if (items.length === 0) { showError('لا توجد سلع في القائمة لإرسالها'); return; }
+  const waLink = 'https://wa.me/?text=' + encodeURIComponent(buildListText(items));
+  window.open(waLink, '_blank', 'noopener');
+});
+
+document.getElementById('export-image-btn').addEventListener('click', (e) => {
+  const items = getCurrentItemNames();
+  if (items.length === 0) { showError('لا توجد سلع في القائمة'); return; }
+  withBusyLabel(e.currentTarget, '⏳ جارٍ التحضير...', async () => {
+    await ensureExportLibraries();
+    const canvas = await renderExportCanvas(items);
+    const blob = await canvasToBlob(canvas);
+    const file = new File([blob], 'قائمة-السلع.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: 'قائمة السلع المطلوبة' }); } catch (_) {}
+    } else {
+      const a = document.createElement('a');
+      a.download = 'قائمة-السلع.png';
+      a.href = URL.createObjectURL(blob);
+      a.click();
+    }
+  });
+});
+
+document.getElementById('export-pdf-btn').addEventListener('click', (e) => {
+  const items = getCurrentItemNames();
+  if (items.length === 0) { showError('لا توجد سلع في القائمة'); return; }
+  withBusyLabel(e.currentTarget, '⏳ جارٍ التحضير...', async () => {
+    await ensureExportLibraries();
+    const canvas = await renderExportCanvas(items);
+    const { jsPDF } = window.jspdf;
+    const imgData = canvas.toDataURL('image/png');
+    const pdfWidth = 120;
+    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    const doc = new jsPDF({ unit: 'mm', format: [pdfWidth, pdfHeight] });
+    doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    const blob = doc.output('blob');
+    const file = new File([blob], 'قائمة-السلع.pdf', { type: 'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: 'قائمة السلع المطلوبة' }); } catch (_) {}
+    } else {
+      doc.save('قائمة-السلع.pdf');
+    }
+  });
 });
 </script>
 </body>
