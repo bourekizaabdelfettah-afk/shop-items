@@ -126,10 +126,8 @@
   .tool-btn:disabled { opacity: 0.6; cursor: not-allowed; }
   .toolbar-label { margin: 12px 0 0; font-size: 12.5px; color: var(--ink-soft); }
 
+  #export-wrap { position: fixed; top: 0; left: 0; width: 0; height: 0; overflow: hidden; }
   #export-template {
-    position: absolute;
-    left: -9999px;
-    top: 0;
     width: 420px;
     background: var(--paper);
     padding: 28px 26px;
@@ -292,6 +290,7 @@
   <footer>عدد السلع: <span id="count">0</span></footer>
 </div>
 
+<div id="export-wrap">
 <div id="export-template">
   <div class="export-header">
     <h2>قائمة السلع المطلوبة</h2>
@@ -299,6 +298,7 @@
   </div>
   <ol id="export-items"></ol>
   <p class="export-footer">تم الإرسال عبر تطبيق سلع المحل</p>
+</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
