@@ -582,21 +582,18 @@ formEl.addEventListener('submit', async (e) => {
 listEl.addEventListener('change', async (e) => {
   const sel = e.target.closest('.item-tag-select');
   if (!sel || !supabaseClient) return;
-  const id = sel.dataset.id;
+  const id = Number(sel.dataset.id);
   const tagId = sel.value ? Number(sel.value) : null;
-  const { data, error } = await supabaseClient
+  const { error } = await supabaseClient
     .from(TABLE_NAME)
     .update({ tag_id: tagId })
-    .eq('id', id)
-    .select();
+    .eq('id', id);
   if (error) {
-    showError('تعذّر تحديث الوسم: ' + error.message);
+    const detail = [error.message, error.details, error.hint, error.code].filter(Boolean).join(' | ');
+    showError('تعذّر تحديث الوسم: ' + detail);
     return;
   }
-  if (!data || data.length === 0) {
-    showError('لم يُحفظ الوسم، حدّث ذاكرة Supabase (reload schema) وحاول مجدداً');
-    return;
-  }
+  await loadItems();
 });
 
 listEl.addEventListener('click', (e) => {
