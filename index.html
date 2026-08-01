@@ -584,8 +584,19 @@ listEl.addEventListener('change', async (e) => {
   if (!sel || !supabaseClient) return;
   const id = sel.dataset.id;
   const tagId = sel.value ? Number(sel.value) : null;
-  const { error } = await supabaseClient.from(TABLE_NAME).update({ tag_id: tagId }).eq('id', id);
-  if (error) showError('تعذّر تحديث الوسم: ' + error.message);
+  const { data, error } = await supabaseClient
+    .from(TABLE_NAME)
+    .update({ tag_id: tagId })
+    .eq('id', id)
+    .select();
+  if (error) {
+    showError('تعذّر تحديث الوسم: ' + error.message);
+    return;
+  }
+  if (!data || data.length === 0) {
+    showError('لم يُحفظ الوسم، حدّث ذاكرة Supabase (reload schema) وحاول مجدداً');
+    return;
+  }
 });
 
 listEl.addEventListener('click', (e) => {
