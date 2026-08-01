@@ -595,6 +595,16 @@ listEl.addEventListener('change', async (e) => {
     showError('تعذّر تحديث الوسم: ' + detail);
     return;
   }
+  const { data: check, error: checkErr } = await supabaseClient
+    .from(TABLE_NAME)
+    .select('tag_id')
+    .eq('id', id)
+    .single();
+  if (checkErr) {
+    showInfo('أُرسل: ' + tagId + ' — لكن تعذّر التحقق: ' + checkErr.message);
+  } else {
+    showInfo('أُرسل: ' + tagId + ' — القيمة الفعلية في القاعدة الآن: ' + check.tag_id);
+  }
   await loadItems();
 });
 
