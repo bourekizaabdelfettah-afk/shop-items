@@ -237,6 +237,18 @@
     font-size: 16px;
     line-height: 1.5;
     word-break: break-word;
+    flex: 1;
+  }
+  .item-tag-select {
+    flex-shrink: 0;
+    max-width: 90px;
+    background: transparent;
+    border: 1.5px solid var(--border);
+    color: var(--ink-soft);
+    border-radius: 999px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 11.5px;
+    padding: 4px 6px;
   }
   .item.stamping .item-text {
     transition: color 300ms ease 200ms;
@@ -432,8 +444,12 @@ function renderItems(items) {
         li.className = 'item';
         li.dataset.id = item.id;
         if (group.color) li.style.setProperty('--item-color', group.color);
+        const tagOptions = tagsCache.map((t) =>
+          '<option value="' + t.id + '"' + (item.tag_id === t.id ? ' selected' : '') + '>' + escapeHtml(t.name) + '</option>'
+        ).join('');
         li.innerHTML =
           '<span class="item-text">' + escapeHtml(item.item_name) + '</span>' +
+          '<select class="item-tag-select" data-id="' + item.id + '" aria-label="اختر وسماً"><option value="">🏷️ بدون وسم</option>' + tagOptions + '</select>' +
           '<button class="done-btn" type="button" aria-label="تم الشراء" title="تم الشراء">✓</button>';
         listEl.appendChild(li);
       });
@@ -548,6 +564,15 @@ formEl.addEventListener('submit', async (e) => {
   const tagId = tagSelectEl.value ? Number(tagSelectEl.value) : null;
   const { error } = await supabaseClient.from(TABLE_NAME).insert({ item_name: name, tag_id: tagId });
   if (error) showError('تعذّرت الإضافة: ' + error.message);
+});
+
+listEl.addEventListener('change', async (e) => {
+  const sel = e.target.closest('.item-tag-select');
+  if (!sel || !supabaseClient) return;
+  const id = sel.dataset.id;
+  const tagId = sel.value ? Number(sel.value) : null;
+  const { error } = await supabaseClient.from(TABLE_NAME).update({ tag_id: tagId }).eq('id', id);
+  if (error) showError('تعذّر تحديث الوسم: ' + error.message);
 });
 
 listEl.addEventListener('click', (e) => {
