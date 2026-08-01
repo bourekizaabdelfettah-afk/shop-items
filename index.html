@@ -99,6 +99,17 @@
     font-size: 15px;
     cursor: pointer;
   }
+  #tag-select {
+    margin-top: 8px;
+    width: 100%;
+    background: var(--paper-3);
+    border: 1.5px solid var(--border);
+    color: var(--ink);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 14px;
+  }
   #add-form button:hover:not(:disabled) { background: var(--green-deep); }
   #add-form button:disabled { opacity: 0.5; cursor: not-allowed; }
   #add-form button:focus-visible,
@@ -126,6 +137,42 @@
   .tool-btn:disabled { opacity: 0.6; cursor: not-allowed; }
   .toolbar-label { margin: 12px 0 0; font-size: 12.5px; color: var(--ink-soft); }
 
+  #tags-panel { margin-top: 10px; }
+  .tags-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .tag-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--chip-color, var(--ink-soft));
+    color: #fff;
+    border-radius: 999px;
+    padding: 5px 6px 5px 10px;
+    font-size: 12.5px;
+  }
+  .tag-del { background: none; border: none; color: #fff; cursor: pointer; font-size: 14px; line-height: 1; padding: 2px 4px; }
+  .tags-empty { color: var(--ink-soft); font-size: 13px; margin: 0 0 8px; }
+  .tag-form { display: flex; flex-direction: column; gap: 8px; }
+  #tag-name-input {
+    background: var(--paper-3); border: 1.5px solid var(--border); color: var(--ink);
+    border-radius: var(--radius); padding: 10px 12px; font-family: 'Cairo', sans-serif; font-size: 14px;
+  }
+  .color-swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+  .swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
+  .swatch.selected { border-color: var(--ink); }
+  #add-tag-btn {
+    background: var(--green); color: #F4EFE0; border: none; border-radius: var(--radius);
+    padding: 10px; font-family: 'Cairo', sans-serif; font-weight: 700; font-size: 14px; cursor: pointer;
+  }
+
+  .group-header {
+    font-family: 'Changa', sans-serif;
+    font-weight: 700;
+    font-size: 13.5px;
+    color: var(--ink);
+    margin: 14px 0 2px;
+    padding-inline-start: 8px;
+    border-inline-start: 4px solid var(--group-color, var(--ink-soft));
+  }
+  ul#list > .group-header:first-child { margin-top: 0; }
+
   #export-wrap { position: fixed; top: 0; left: 0; width: 0; height: 0; overflow: hidden; }
   #export-template {
     width: 420px;
@@ -138,7 +185,7 @@
   #export-template h2 { font-family: 'Changa', sans-serif; font-size: 24px; margin: 0 0 4px; }
   #export-template .export-header { border-bottom: 2px dashed var(--border); padding-bottom: 14px; margin-bottom: 14px; }
   #export-template #export-date { margin: 0; font-size: 13px; color: var(--ink-soft); }
-  #export-template ol { margin: 0; padding-inline-start: 22px; font-size: 17px; line-height: 2.1; }
+  #export-template .export-line { margin: 0; font-size: 17px; line-height: 2.1; text-align: right; }
   #export-template .export-footer { margin: 18px 0 0; padding-top: 12px; border-top: 2px dashed var(--border); font-size: 12px; color: var(--ink-soft); text-align: center; }
 
   .notice {
@@ -173,6 +220,7 @@
     min-height: 60px;
     background: var(--paper-2);
     border: 1px solid var(--border);
+    border-inline-start: 4px solid var(--item-color, transparent);
     border-radius: var(--radius);
     padding: 14px;
     display: flex;
@@ -266,9 +314,19 @@
       <input id="item-input" type="text" placeholder="اكتب اسم السلعة..." autocomplete="off" required />
       <button type="submit">إضافة</button>
     </form>
+    <select id="tag-select"><option value="">بدون وسم</option></select>
     <div class="toolbar">
       <button id="install-btn" type="button" class="tool-btn" hidden>📲 تثبيت التطبيق</button>
       <button id="share-btn" type="button" class="tool-btn">🔗 رابط التطبيق</button>
+      <button id="tags-toggle-btn" type="button" class="tool-btn">🏷️ الوسوم</button>
+    </div>
+    <div id="tags-panel" class="notice" hidden>
+      <div class="tags-list" id="tags-list"></div>
+      <div class="tag-form">
+        <input id="tag-name-input" type="text" placeholder="اسم الوسم (مثال: الحليب ومشتقاته)" autocomplete="off" />
+        <div class="color-swatches" id="color-swatches"></div>
+        <button id="add-tag-btn" type="button">إضافة وسم</button>
+      </div>
     </div>
     <p class="toolbar-label">إرسال القائمة الحالية إلى المورّد:</p>
     <div class="toolbar">
@@ -296,7 +354,7 @@
     <h2>قائمة السلع المطلوبة</h2>
     <p id="export-date"></p>
   </div>
-  <ol id="export-items"></ol>
+  <div id="export-items"></div>
   <p class="export-footer">تم الإرسال عبر تطبيق سلع المحل</p>
 </div>
 </div>
@@ -351,18 +409,119 @@ function renderItems(items) {
     emptyEl.hidden = false;
   } else {
     emptyEl.hidden = true;
+    const groups = new Map();
     items.forEach((item) => {
-      const li = document.createElement('li');
-      li.className = 'item';
-      li.dataset.id = item.id;
-      li.innerHTML =
-        '<span class="item-text">' + escapeHtml(item.item_name) + '</span>' +
-        '<button class="done-btn" type="button" aria-label="تم الشراء" title="تم الشراء">✓</button>';
-      listEl.appendChild(li);
+      const key = item.tag_id || 'none';
+      if (!groups.has(key)) {
+        groups.set(key, {
+          name: item.tags ? item.tags.name : 'بدون وسم',
+          color: item.tags ? item.tags.color : null,
+          items: []
+        });
+      }
+      groups.get(key).items.push(item);
+    });
+    groups.forEach((group) => {
+      const header = document.createElement('li');
+      header.className = 'group-header';
+      header.style.setProperty('--group-color', group.color || 'var(--ink-soft)');
+      header.textContent = group.name;
+      listEl.appendChild(header);
+      group.items.forEach((item) => {
+        const li = document.createElement('li');
+        li.className = 'item';
+        li.dataset.id = item.id;
+        if (group.color) li.style.setProperty('--item-color', group.color);
+        li.innerHTML =
+          '<span class="item-text">' + escapeHtml(item.item_name) + '</span>' +
+          '<button class="done-btn" type="button" aria-label="تم الشراء" title="تم الشراء">✓</button>';
+        listEl.appendChild(li);
+      });
     });
   }
   countEl.textContent = items ? items.length : 0;
 }
+
+// ================== الوسوم (تصنيف السلع بالألوان) ==================
+const TAG_COLORS = ['#2F5D3A', '#A23B2E', '#3B5D8C', '#7A4FA0', '#B8860B', '#4A7A7A', '#8C5A3B', '#A0527A'];
+let selectedTagColor = TAG_COLORS[0];
+let tagsCache = [];
+const tagSelectEl = document.getElementById('tag-select');
+const tagsListEl = document.getElementById('tags-list');
+const tagsPanelEl = document.getElementById('tags-panel');
+const tagsToggleBtn = document.getElementById('tags-toggle-btn');
+const tagNameInput = document.getElementById('tag-name-input');
+const swatchesEl = document.getElementById('color-swatches');
+const addTagBtn = document.getElementById('add-tag-btn');
+
+function renderColorSwatches() {
+  swatchesEl.innerHTML = '';
+  TAG_COLORS.forEach((color) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'swatch' + (color === selectedTagColor ? ' selected' : '');
+    b.style.background = color;
+    b.addEventListener('click', () => { selectedTagColor = color; renderColorSwatches(); });
+    swatchesEl.appendChild(b);
+  });
+}
+
+function renderTagSelect() {
+  const current = tagSelectEl.value;
+  tagSelectEl.innerHTML = '<option value="">بدون وسم</option>';
+  tagsCache.forEach((tag) => {
+    const opt = document.createElement('option');
+    opt.value = tag.id;
+    opt.textContent = tag.name;
+    opt.style.color = tag.color;
+    tagSelectEl.appendChild(opt);
+  });
+  tagSelectEl.value = current;
+}
+
+function renderTagsList() {
+  tagsListEl.innerHTML = '';
+  if (tagsCache.length === 0) {
+    tagsListEl.innerHTML = '<p class="tags-empty">لا توجد وسوم بعد، أضف أول وسم بالأسفل</p>';
+    return;
+  }
+  tagsCache.forEach((tag) => {
+    const chip = document.createElement('span');
+    chip.className = 'tag-chip';
+    chip.style.setProperty('--chip-color', tag.color);
+    chip.innerHTML = escapeHtml(tag.name) + ' <button class="tag-del" type="button" data-id="' + tag.id + '" aria-label="حذف الوسم">×</button>';
+    tagsListEl.appendChild(chip);
+  });
+}
+
+async function loadTags() {
+  if (!supabaseClient) return;
+  const { data, error } = await supabaseClient.from('tags').select('*').order('created_at', { ascending: true });
+  if (error) { showError('تعذّر تحميل الوسوم: ' + error.message); return; }
+  tagsCache = data || [];
+  renderTagSelect();
+  renderTagsList();
+}
+
+tagsToggleBtn.addEventListener('click', () => { tagsPanelEl.hidden = !tagsPanelEl.hidden; });
+
+addTagBtn.addEventListener('click', async () => {
+  const name = tagNameInput.value.trim();
+  if (!name) { showError('اكتب اسم الوسم أولاً'); return; }
+  if (!supabaseClient) return;
+  const { error } = await supabaseClient.from('tags').insert({ name, color: selectedTagColor });
+  if (error) { showError('تعذّرت إضافة الوسم: ' + error.message); return; }
+  tagNameInput.value = '';
+});
+
+tagsListEl.addEventListener('click', async (e) => {
+  const btn = e.target.closest('.tag-del');
+  if (!btn || !supabaseClient) return;
+  const { error } = await supabaseClient.from('tags').delete().eq('id', btn.dataset.id);
+  if (error) showError('تعذّر حذف الوسم: ' + error.message);
+});
+
+renderColorSwatches();
 
 let supabaseClient = null;
 
@@ -370,7 +529,7 @@ async function loadItems() {
   if (!supabaseClient) return;
   const { data, error } = await supabaseClient
     .from(TABLE_NAME)
-    .select('*')
+    .select('*, tags(name, color)')
     .order('created_at', { ascending: true });
   if (error) {
     showError('تعذّر تحميل القائمة: ' + error.message);
@@ -386,7 +545,8 @@ formEl.addEventListener('submit', async (e) => {
   if (!name) return;
   inputEl.value = '';
   inputEl.focus();
-  const { error } = await supabaseClient.from(TABLE_NAME).insert({ item_name: name });
+  const tagId = tagSelectEl.value ? Number(tagSelectEl.value) : null;
+  const { error } = await supabaseClient.from(TABLE_NAME).insert({ item_name: name, tag_id: tagId });
   if (error) showError('تعذّرت الإضافة: ' + error.message);
 });
 
@@ -412,10 +572,15 @@ listEl.addEventListener('click', (e) => {
 
 if (isConfigured) {
   supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  loadTags();
   loadItems();
   supabaseClient
     .channel('shopping_list_realtime')
     .on('postgres_changes', { event: '*', schema: 'public', table: TABLE_NAME }, loadItems)
+    .subscribe();
+  supabaseClient
+    .channel('tags_realtime')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'tags' }, () => { loadTags(); loadItems(); })
     .subscribe();
 } else {
   emptyEl.hidden = true;
@@ -513,15 +678,16 @@ function canvasToBlob(canvas) {
 
 async function renderExportCanvas(items) {
   const dateEl = document.getElementById('export-date');
-  const olEl = document.getElementById('export-items');
+  const itemsEl = document.getElementById('export-items');
   dateEl.textContent = new Date().toLocaleDateString('ar-DZ-u-nu-latn', { year: 'numeric', month: 'long', day: 'numeric' });
-  olEl.innerHTML = '';
-  items.forEach((name) => {
-    const li = document.createElement('li');
-    li.textContent = name;
-    olEl.appendChild(li);
+  itemsEl.innerHTML = '';
+  items.forEach((name, i) => {
+    const p = document.createElement('p');
+    p.className = 'export-line';
+    p.textContent = (i + 1) + '. ' + name;
+    itemsEl.appendChild(p);
   });
-  return await html2canvas(document.getElementById('export-template'), { backgroundColor: '#E4D9BE', scale: 2 });
+  return await html2canvas(document.getElementById('export-template'), { backgroundColor: '#E4D9BE', scale: 3 });
 }
 
 async function withBusyLabel(btn, busyText, fn) {
@@ -571,11 +737,36 @@ document.getElementById('export-pdf-btn').addEventListener('click', (e) => {
     await ensureExportLibraries();
     const canvas = await renderExportCanvas(items);
     const { jsPDF } = window.jspdf;
-    const imgData = canvas.toDataURL('image/png');
-    const pdfWidth = 120;
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-    const doc = new jsPDF({ unit: 'mm', format: [pdfWidth, pdfHeight] });
-    doc.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 10;
+    const drawW = pageW - margin * 2;
+    const drawH = (canvas.height * drawW) / canvas.width;
+    const usableH = pageH - margin * 2;
+
+    if (drawH <= usableH) {
+      doc.addImage(canvas.toDataURL('image/png'), 'PNG', margin, margin, drawW, drawH);
+    } else {
+      const sliceHeightPx = Math.floor((usableH * canvas.width) / drawW);
+      let renderedPx = 0;
+      let firstPage = true;
+      while (renderedPx < canvas.height) {
+        const thisSlicePx = Math.min(sliceHeightPx, canvas.height - renderedPx);
+        const sliceCanvas = document.createElement('canvas');
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = thisSlicePx;
+        sliceCanvas.getContext('2d').drawImage(
+          canvas, 0, renderedPx, canvas.width, thisSlicePx, 0, 0, canvas.width, thisSlicePx
+        );
+        const sliceDrawH = (thisSlicePx * drawW) / canvas.width;
+        if (!firstPage) doc.addPage();
+        doc.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', margin, margin, drawW, sliceDrawH);
+        renderedPx += thisSlicePx;
+        firstPage = false;
+      }
+    }
+
     const blob = doc.output('blob');
     const file = new File([blob], 'قائمة-السلع.pdf', { type: 'application/pdf' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
