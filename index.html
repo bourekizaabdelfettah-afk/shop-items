@@ -446,13 +446,15 @@ function renderItems(items) {
         li.dataset.id = item.id;
         if (group.color) li.style.setProperty('--item-color', group.color);
         const tagOptions = tagsCache.map((t) =>
-          '<option value="' + t.id + '"' + (String(item.tag_id) === String(t.id) ? ' selected' : '') + '>' + escapeHtml(t.name) + '</option>'
+          '<option value="' + t.id + '">' + escapeHtml(t.name) + '</option>'
         ).join('');
         li.innerHTML =
           '<span class="item-text">' + escapeHtml(item.item_name) + '</span>' +
           '<select class="item-tag-select" data-id="' + item.id + '" aria-label="اختر وسماً"><option value="">🏷️ بدون وسم</option>' + tagOptions + '</select>' +
           '<button class="done-btn" type="button" aria-label="تم الشراء" title="تم الشراء">✓</button>';
         listEl.appendChild(li);
+        const selEl = li.querySelector('.item-tag-select');
+        selEl.value = item.tag_id != null ? String(item.tag_id) : '';
       });
     });
   }
