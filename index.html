@@ -610,15 +610,14 @@ listEl.addEventListener('click', (e) => {
 
 if (isConfigured) {
   supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  loadTags();
-  loadItems();
+  (async () => { await loadTags(); await loadItems(); })();
   supabaseClient
     .channel('shopping_list_realtime')
     .on('postgres_changes', { event: '*', schema: 'public', table: TABLE_NAME }, loadItems)
     .subscribe();
   supabaseClient
     .channel('tags_realtime')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'tags' }, () => { loadTags(); loadItems(); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'tags' }, async () => { await loadTags(); await loadItems(); })
     .subscribe();
 } else {
   emptyEl.hidden = true;
